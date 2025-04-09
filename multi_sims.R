@@ -1,11 +1,11 @@
 # parameter combination
-p.vals <- c(10, 15, 20, 25, 50)  # covs
-n.obs <- c(50, 100, 150, 200, 250)  # obs
+p.vals <- c(10, 25, 50)  # covs
+n.obs <- c(50, 100, 250, 500, 1000)  # obs
 settings <- 1:9
 nsims <- 100
 
-# parallel backend
-n_cores <- detectCores() - 6
+# parallel backend (get cpu cores)
+n_cores <- length( parallelly::availableWorkers() )/2
 cl <- makeCluster(n_cores)
 registerDoParallel(cl)
 
@@ -231,3 +231,8 @@ sim.res <- foreach(i = 1:nrow(sim.combos), .errorhandling = 'pass', .packages = 
 
 # end
 stopCluster(cl)
+
+small.cov.small.n <- sim.res
+
+
+

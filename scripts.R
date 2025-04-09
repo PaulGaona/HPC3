@@ -9,3 +9,6 @@ source("./multi_sims.R")
 #save(mse.all, file = "mse.all.rda")
 # save lasso covariates as rda file
 #save(cov.kept.list, file = "lasso.cov.kept.rda")
+
+# results from multi_sims
+save(small.cov.small.n, file = "small.cov.small.n.rda")
