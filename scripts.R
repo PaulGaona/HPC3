@@ -2,11 +2,10 @@
 source("./funs.R")
 source("./packages.R")
 # script for running analysis
-
-source("./static_sim_and_setting.R")
-
+# change when needed to
+#source("./static_sim_and_setting.R")
+source("./multi_sims.R")
 # save mse as rda file
-save(mse.all, file = "mse.all.rda")
+#save(mse.all, file = "mse.all.rda")
 # save lasso covariates as rda file
-save(lasso.cov.kept, file = "lasso.cov.kept.rda")
-
+#save(cov.kept.list, file = "lasso.cov.kept.rda")

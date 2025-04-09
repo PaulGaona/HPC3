@@ -151,8 +151,9 @@ mod.names <- c("oracle",
 )
 rownames(mse.all) <- mod.names
 
-# non-zero coefs for lasso
-lasso.cov.kept <- cbind(
+
+# list of vectors with non-zero coefficient names
+cov.kept.list <- list(
   rownames(coef(las.og.train, s = las.og.train$lambda.1se))[which(coef(las.og.train, s = las.og.train$lambda.1se) != 0)],
   rownames(coef(las.psis.og.train, s = las.psis.og.train$lambda.1se))[which(coef(las.psis.og.train, s = las.psis.og.train$lambda.1se) != 0)],
   rownames(coef(las.d0.train, s = las.d0.train$lambda.1se))[which(coef(las.d0.train, s = las.d0.train$lambda.1se) != 0)],
@@ -162,7 +163,8 @@ lasso.cov.kept <- cbind(
   rownames(coef(las.d4.train, s = las.d4.train$lambda.1se))[which(coef(las.d4.train, s = las.d4.train$lambda.1se) != 0)],
   rownames(coef(las.all.train, s = las.all.train$lambda.1se))[which(coef(las.all.train, s = las.all.train$lambda.1se) != 0)]
 )
-colnames(lasso.cov.kept) <- c("all og", "all nodes",
+
+names(cov.kept.list) <- c("all og", "all nodes",
                               "all og + 0 depth nodes", "all og + 1 depth nodes",
                               "all og + 2 depth nodes", "all og + 3 depth nodes",
                               "all og + 4 depth nodes", "all og + all nodes")
