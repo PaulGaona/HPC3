@@ -1,8 +1,9 @@
-n = 100
-p = 10
+n = 500
+p = 100
 sd = 1
-setting = 2
+setting = 3
 
+set.seed(92617)
 sim.data <- sparse.sims(n = n, p = p, sd = sd, setting = setting)
 
 og.train <- as.data.frame(sim.data[[1]]$train)
@@ -30,48 +31,140 @@ mdi.def <- rfplus(x = subset(og.train, select = -y), y = og.train$y,
 
 psis.def.og.train <- mdi.def$psis_train[[1]]
 psis.def.og.train.df <- cbind(y = og.train$y, psis.def.og.train)
+og.and.psis.og.train <- cbind(og.train, psis.def.og.train)
 
 psis.def.og.test <- get_train_test_psis(mdi.def, data.frame(subset(og.test, select = -y)))$test[[1]]
 og.and.psis.og.test <- cbind(og.test, psis.def.og.test)
 # Augmented Data frames
+# cross validaiton set up
 num.nodes.depth <- c(1,3,7,15,31) # up to depth 4
+set.seed(92617)
+# 5 fold
+tot.n <- nrow(og.train)
+folds <- sample(rep(1:5, length.out = tot.n))
+
+cv.res <- data.frame(depth = character(), mse = numeric(), stringsAsFactors = FALSE)
+lasso.cv.res <- data.frame(depth = character(), nodes = numeric(), mse = numeric(), stringsAsFactors = FALSE)
+ridge.cv.res <- data.frame(depth = character(), nodes = numeric(), mse = numeric(), stringsAsFactors = FALSE)
 
 for (i in 1:length(num.nodes.depth)) {
+  depth.name <- paste0("d", i-1)
+
+  # Create dataset for current depth only (don't store all in memory)
   if (num.nodes.depth[i] < ncol(psis.def.og.train)) {
-    assign( paste0( "og.and.d", i-1 ,".train.df"), cbind(og.train, subset(psis.def.og.train, select = c(1:num.nodes.depth[i]) ) )
-    ) } else {
-      assign(paste0("og.and.d", i-1 ,".train.df"), cbind(og.train, psis.def.og.train))
-    }
+    curr.depth.df <- cbind(og.train, subset(psis.def.og.train, select = c(1:num.nodes.depth[i])))
+  } else {
+    curr.depth.df <- cbind(og.train, psis.def.og.train)
+  }
+
+  fold.mse <- numeric(5)
+  # for linear model
+  # For each fold
+  for (k in 1:5) {
+    # training and validation indeces
+    cv.train.indices <- which(folds != k)
+    cv.valid.indices <- which(folds == k)
+
+    cv.train.data <- curr.depth.df[cv.train.indices, ]
+    cv.valid.data <- curr.depth.df[cv.valid.indices, ]
+
+    cv.mod <- lm(y ~ ., data = cv.train.data)
+    cv.pred <- predict(cv.mod, newdata = cv.valid.data)
+
+    # Calculate MSE for this fold
+    fold.mse[k] <- mean((cv.valid.data$y - cv.pred)^2)
+
+    # Clean up to free memory
+    rm(cv.train.data, cv.valid.data, cv.mod, cv.pred)
+    gc(verbose = FALSE)
+  }
+  # Average MSE across folds
+  cv.avg.mse <- mean(fold.mse)
+
+  cv.res <- rbind(cv.res, data.frame(
+    depth = depth.name,
+    nodes = num.nodes.depth[i],
+    mse = cv.avg.mse
+  ))
+  # regularization x and y
+  x <- as.matrix(curr.depth.df[, -1])
+  y <- curr.depth.df$y
+
+  # for lasso
+  cv.lasso <- cv.glmnet(x, y, alpha = 1, nfolds = 5)
+
+  min.mse.lasso <- min(cv.lasso$cvm)
+
+  lasso.cv.res <- rbind(lasso.cv.res, data.frame(
+    depth = depth.name,
+    nodes = num.nodes.depth[i],
+    mse = min.mse.lasso,
+    min.lambda = cv.lasso$lambda.min,
+    min.lambda.1se = cv.lasso$lambda.1se
+  ))
+
+  # for ridge
+  cv.ridge <- cv.glmnet(x, y, alpha = 0, nfolds = 5)
+  min.mse.ridge <- min(cv.ridge$cvm)
+
+  ridge.cv.res <- rbind(ridge.cv.res, data.frame(
+    depth = depth.name,
+    nodes = num.nodes.depth[i],
+    mse = min.mse.ridge,
+    min.lambda = cv.ridge$lambda.min,
+    min.lambda.1se = cv.ridge$lambda.1se
+  ))
+
+  # Clean up to free memory
+  rm(curr.depth.df, fold.mse,cv.lasso, x, y, cv.ridge, min.mse.lasso, min.mse.ridge)
+
+  gc(verbose = FALSE)
 }
-og.and.psis.og.train <- cbind(og.train, psis.def.og.train)
+# get dataframe for best depth from cv.res
+best.depth <- cv.res[which.min(cv.res$mse), "depth"]
+best.depth.ind <- as.numeric(gsub("d", "", best.depth)) + 1
+# lasso
+best.depth.lasso <- lasso.cv.res[which.min(lasso.cv.res$mse), "depth"]
+best.depth.lasso.ind <- as.numeric(gsub("d", "", best.depth.lasso)) + 1
+# ridge
+best.depth.ridge <- ridge.cv.res[which.min(ridge.cv.res$mse), "depth"]
+best.depth.ridge.ind <- as.numeric(gsub("d", "", best.depth.ridge)) + 1
+
+if (num.nodes.depth[best.depth.ind] < ncol(psis.def.og.train)) {
+  cv.og.and.node.train.df <- cbind(og.train, subset(psis.def.og.train, select = c(1:num.nodes.depth[best.depth.ind])))
+} else {
+  cv.og.and.node.train.df <- cbind(og.train, psis.def.og.train)
+}
+
+if (num.nodes.depth[best.depth.lasso.ind] < ncol(psis.def.og.train)) {
+  cv.og.and.node.train.df <- cbind(og.train, subset(psis.def.og.train, select = c(1:num.nodes.depth[best.depth.lasso.ind])))
+} else {
+  cv.og.and.node.train.df <- cbind(og.train, psis.def.og.train)
+}
+
+if (num.nodes.depth[best.depth.ridge.ind] < ncol(psis.def.og.train)) {
+  cv.og.and.node.train.df <- cbind(og.train, subset(psis.def.og.train, select = c(1:num.nodes.depth[best.depth.ridge.ind])))
+} else {
+  cv.og.and.node.train.df <- cbind(og.train, psis.def.og.train)
+}
+
+
 ##### Statistical Models
 # linear
 lin.og.train <- lm(y ~ ., data = og.train) # linear - all og covariates
 lin.psis.og.train <- lm(y ~ ., data = psis.def.og.train.df) # linear - all nodes
-lin.d0.train <- lm(y ~ ., data = og.and.d0.train.df) # linear - all og covariates and [depth 0 ,nodes 1 ]
-lin.d1.train <- lm(y ~ ., data = og.and.d1.train.df) # linear - all og covariates and [depth 1 ,nodes 3 ]
-lin.d2.train <- lm(y ~ ., data = og.and.d2.train.df) # linear - all og covariates and [depth 2 ,nodes 7 ]
-lin.d3.train <- lm(y ~ ., data = og.and.d3.train.df) # linear - all og covariates and [depth 3 ,nodes 15 ]
-lin.d4.train <- lm(y ~ ., data = og.and.d4.train.df) # linear - all og covariates and [depth 4 ,nodes 31 ]
+lin.dcv.train <- lm(y ~ ., data = cv.og.and.node.train.df) # linear - best model from cv
 lin.all.train <- lm(y ~ ., data = og.and.psis.og.train) # linear - all og covariates and all nodes
 # lasso
 las.og.train <- cv.glmnet(as.matrix(og.train[, -1]), og.train$y, alpha = 1) # lasso - all og covariates
 las.psis.og.train <- cv.glmnet(as.matrix(psis.def.og.train.df[, -1]), psis.def.og.train.df$y, alpha = 1) # lasso - all nodes
-las.d0.train <- cv.glmnet(as.matrix(og.and.d0.train.df[, -1]), og.and.d0.train.df$y, alpha = 1) # lasso - all og covariates and [depth 0 ,nodes 1 ]
-las.d1.train <- cv.glmnet(as.matrix(og.and.d1.train.df[, -1]), og.and.d1.train.df$y, alpha = 1) # lasso - all og covariates and [depth 1 ,nodes 3 ]
-las.d2.train <- cv.glmnet(as.matrix(og.and.d2.train.df[, -1]), og.and.d2.train.df$y, alpha = 1) # lasso - all og covariates and [depth 2 ,nodes 7 ]
-las.d3.train <- cv.glmnet(as.matrix(og.and.d3.train.df[, -1]), og.and.d3.train.df$y, alpha = 1) # lasso - all og covariates and [depth 3 ,nodes 15 ]
-las.d4.train <- cv.glmnet(as.matrix(og.and.d4.train.df[, -1]), og.and.d4.train.df$y, alpha = 1) # lasso - all og covariates and [depth 4 ,nodes 31 ]
+las.dcv.train <- cv.glmnet(as.matrix(cv.og.and.node.train.df[, -1]), cv.og.and.node.train.df$y, alpha = 1) # lasso - best model from cv
 las.all.train <- cv.glmnet(as.matrix(og.and.psis.og.train[, -1]), og.and.psis.og.train$y, alpha = 1) # lasso - all og covariates and all nodes
 # return non-0 coefficients
 # ridge
 rid.og.train <- cv.glmnet(as.matrix(og.train[, -1]), og.train$y, alpha = 0) # ridge - all og covariates
 rid.psis.og.train <- cv.glmnet(as.matrix(psis.def.og.train.df[, -1]), psis.def.og.train.df$y, alpha = 0) # ridge - all nodes
-rid.d0.train <- cv.glmnet(as.matrix(og.and.d0.train.df[, -1]), og.and.d0.train.df$y, alpha = 0) # ridge - all og covariates and [depth 0 ,nodes 1 ]
-rid.d1.train <- cv.glmnet(as.matrix(og.and.d1.train.df[, -1]), og.and.d1.train.df$y, alpha = 0) # ridge - all og covariates and [depth 1 ,nodes 3 ]
-rid.d2.train <- cv.glmnet(as.matrix(og.and.d2.train.df[, -1]), og.and.d2.train.df$y, alpha = 0) # ridge - all og covariates and [depth 2 ,nodes 7 ]
-rid.d3.train <- cv.glmnet(as.matrix(og.and.d3.train.df[, -1]), og.and.d3.train.df$y, alpha = 0) # ridge - all og covariates and [depth 3 ,nodes 15 ]
-rid.d4.train <- cv.glmnet(as.matrix(og.and.d4.train.df[, -1]), og.and.d4.train.df$y, alpha = 0) # ridge - all og covariates and [depth 4 ,nodes 31 ]
+rid.dcv.train <- cv.glmnet(as.matrix(cv.og.and.node.train.df[, -1]), cv.og.and.node.train.df$y, alpha = 0) # ridge - best model from cv
 rid.all.train <- cv.glmnet(as.matrix(og.and.psis.og.train[, -1]), og.and.psis.og.train$y, alpha = 0) # ridge - all og covariates and all nodes
 #### tree based methods
 # tree
@@ -83,31 +176,19 @@ oracle.test <- predict(oracle.train.model, newdata = og.test) # oracle
 # linear
 lin.test <- predict(lin.og.train, newdata = og.test) # linear - all og covariates
 lin.psis.test <- predict(lin.psis.og.train, newdata = psis.def.og.test) # linear - all nodes
-lin.d0.test <- predict(lin.d0.train, newdata = og.and.psis.og.test) # linear - all og covariates and [depth 0 ,nodes 1 ]
-lin.d1.test <- predict(lin.d1.train, newdata = og.and.psis.og.test) # linear - all og covariates and [depth 1 ,nodes 3 ]
-lin.d2.test <- predict(lin.d2.train, newdata = og.and.psis.og.test) # linear - all og covariates and [depth 2 ,nodes 7 ]
-lin.d3.test <- predict(lin.d3.train, newdata = og.and.psis.og.test) # linear - all og covariates and [depth 3 ,nodes 15 ]
-lin.d4.test <- predict(lin.d4.train, newdata = og.and.psis.og.test) # linear - all og covariates and [depth 4 ,nodes 31 ]
+lin.dcv.test <- predict(lin.dcv.train, newdata = og.and.psis.og.test) # linear - best model from cv
 lin.all.test <- predict(lin.all.train, newdata = og.and.psis.og.test) # linear - all og covariates and all nodes
 # lasso
 newx.start <- as.matrix(og.and.psis.og.test[, -1])
 
 las.test <- predict(las.og.train, newx = as.matrix(og.test[, -1]), s = "lambda.1se") # lasso - all og covariates
 las.psis.test <- predict(las.psis.og.train, newx = as.matrix(psis.def.og.test), s = "lambda.1se") # lasso - all nodes
-las.d0.test <- predict(las.d0.train, newx = newx.start[,colnames(og.and.d0.train.df[-1])], s = "lambda.1se") # lasso - all og covariates and [depth 0 ,nodes 1 ]
-las.d1.test <- predict(las.d1.train, newx = newx.start[,colnames(og.and.d1.train.df[-1])], s = "lambda.1se") # lasso - all og covariates and [depth 1 ,nodes 3 ]
-las.d2.test <- predict(las.d2.train, newx = newx.start[,colnames(og.and.d2.train.df[-1])], s = "lambda.1se") # lasso - all og covariates and [depth 2 ,nodes 7 ]
-las.d3.test <- predict(las.d3.train, newx = newx.start[,colnames(og.and.d3.train.df[-1])], s = "lambda.1se") # lasso - all og covariates and [depth 3 ,nodes 15 ]
-las.d4.test <- predict(las.d4.train, newx = newx.start[,colnames(og.and.d4.train.df[-1])], s = "lambda.1se") # lasso - all og covariates and [depth 4 ,nodes 31 ]
+las.dcv.test <- predict(las.dcv.train, newx = newx.start[,colnames(cv.og.and.node.train.df[, -1])], s = "lambda.1se") # lasso - best model from cv
 las.all.test <- predict(las.all.train, newx = newx.start, s = "lambda.1se") # lasso - all og covariates and all nodes
 # ridge
 rid.test <- predict(rid.og.train, newx = as.matrix(og.test[, -1]), s = "lambda.1se") # ridge - all og covariates
 rid.psis.test <- predict(rid.psis.og.train, newx = as.matrix(psis.def.og.test), s = "lambda.1se") # ridge - all nodes
-rid.d0.test <- predict(rid.d0.train, newx = newx.start[,colnames(og.and.d0.train.df[-1])], s = "lambda.1se") # ridge - all og covariates and [depth 0 ,nodes 1 ]
-rid.d1.test <- predict(rid.d1.train, newx = newx.start[,colnames(og.and.d1.train.df[-1])], s = "lambda.1se") # ridge - all og covariates and [depth 1 ,nodes 3 ]
-rid.d2.test <- predict(rid.d2.train, newx = newx.start[,colnames(og.and.d2.train.df[-1])], s = "lambda.1se") # ridge - all og covariates and [depth 2 ,nodes 7 ]
-rid.d3.test <- predict(rid.d3.train, newx = newx.start[,colnames(og.and.d3.train.df[-1])], s = "lambda.1se") # ridge - all og covariates and [depth 3 ,nodes 15 ]
-rid.d4.test <- predict(rid.d4.train, newx = newx.start[,colnames(og.and.d4.train.df[-1])], s = "lambda.1se") # ridge - all og covariates and [depth 4 ,nodes 31 ]
+rid.dcv.test <- predict(rid.dcv.train, newx = newx.start[,colnames(cv.og.and.node.train.df[, -1])], s = "lambda.1se") # ridge - best model from cv
 rid.all.test <- predict(rid.all.train, newx = newx.start, s = "lambda.1se") # ridge - all og covariates and all nodes
 # tree
 tree.def.test <- predict(tree.train, newdata = og.test) # def tree
@@ -115,56 +196,38 @@ tree.def.test <- predict(tree.train, newdata = og.test) # def tree
 rf.test <- predict(rf.train, newdata = og.test) # random forest
 ################# MSE
 mse.all <- rbind(
-  mean((oracle.test - og.test$y)^2), # oracle
-  mean((lin.test - og.test$y)^2), # linear - all og covariates
-  mean((lin.psis.test - og.test$y)^2), # linear - all nodes
-  mean((lin.d0.test - og.test$y)^2), # linear - all og covariates and [depth 0 ,nodes 1 ]
-  mean((lin.d1.test - og.test$y)^2), # linear - all og covariates and [depth 1 ,nodes 3 ]
-  mean((lin.d2.test - og.test$y)^2), # linear - all og covariates and [depth 2 ,nodes 7 ]
-  mean((lin.d3.test - og.test$y)^2), # linear - all og covariates and [depth 3 ,nodes 15 ]
-  mean((lin.d4.test - og.test$y)^2), # linear - all og covariates and [depth 4 ,nodes 31 ]
-  mean((lin.all.test - og.test$y)^2), # linear - all og covariates and all nodes
-  mean((las.test - og.test$y)^2), # lasso - all og covariates
-  mean((las.psis.test - og.test$y)^2), # lasso - all nodes
-  mean((las.d0.test - og.test$y)^2), # lasso - all og covariates and [depth 0 ,nodes 1 ]
-  mean((las.d1.test - og.test$y)^2), # lasso - all og covariates and [depth 1 ,nodes 3 ]
-  mean((las.d2.test - og.test$y)^2), # lasso - all og covariates and [depth 2 ,nodes 7 ]
-  mean((las.d3.test - og.test$y)^2), # lasso - all og covariates and [depth 3 ,nodes 15 ]
-  mean((las.d4.test - og.test$y)^2), # lasso - all og covariates and [depth 4 ,nodes 31 ]
-  mean((las.all.test - og.test$y)^2), # lasso - all og covariates and all nodes
-  mean((rid.test - og.test$y)^2), # ridge - all og covariates
-  mean((rid.psis.test - og.test$y)^2), # ridge - all nodes
-  mean((rid.d0.test - og.test$y)^2), # ridge - all og covariates and [depth 0 ,nodes 1 ]
-  mean((rid.d1.test - og.test$y)^2), # ridge - all og covariates and [depth 1 ,nodes 3 ]
-  mean((rid.d2.test - og.test$y)^2), # ridge - all og covariates and [depth 2 ,nodes 7 ]
-  mean((rid.d3.test - og.test$y)^2), # ridge - all og covariates and [depth 3 ,nodes 15 ]
-  mean((rid.d4.test - og.test$y)^2), # ridge - all og covariates and [depth 4 ,nodes 31 ]
-  mean((rid.all.test - og.test$y)^2), # ridge - all og covariates and all nodes
-  mean((tree.def.test - og.test$y)^2), # def tree
-  mean((rf.test - og.test$y)^2) # random forest
+  oracle = mean((og.test$y - oracle.test)^2),
+  lin.og = mean((og.test$y - lin.test)^2),
+  lin.psis = mean((og.test$y - lin.psis.test)^2),
+  lin.dcv = mean((og.test$y - lin.dcv.test)^2),
+  lin.all = mean((og.test$y - lin.all.test)^2),
+  las.og = mean((og.test$y - las.test)^2),
+  las.psis = mean((og.test$y - las.psis.test)^2),
+  las.dcv = mean((og.test$y - las.dcv.test)^2),
+  las.all = mean((og.test$y - las.all.test)^2),
+  rid.og = mean((og.test$y - rid.test)^2),
+  rid.psis = mean((og.test$y - rid.psis.test)^2),
+  rid.dcv = mean((og.test$y - rid.dcv.test)^2),
+  rid.all = mean((og.test$y - rid.all.test)^2),
+  tree.def = mean((og.test$y - tree.def.test)^2),
+  rf = mean((og.test$y - rf.test)^2)
 )
 mod.names <- c("oracle",
-               "lin","lin.psis","lin.d0","lin.d1","lin.d2","lin.d3","lin.d4","lin.all",
-               "lasso","lasso.psis","lasso.d0","lasso.d1","lasso.d2","lasso.d3","lasso.d4","lasso.all",
-               "ridge","ridge.psis","ridge.d0","ridge.d1","ridge.d2","ridge.d3","ridge.d4","ridge.all",
-               "tree.def", "rf"
-)
+             "lin.og","lin.psis","lin.dcv","lin.all",
+             "las.og","las.psis","las.dcv","las.all",
+             "rid.og","rid.psis","rid.dcv","rid.all",
+             "tree.def", "rf")
+
 rownames(mse.all) <- mod.names
 
-
+mse.all
 # list of vectors with non-zero coefficient names
-cov.kept.list <- list(
-  rownames(coef(las.og.train, s = las.og.train$lambda.1se))[which(coef(las.og.train, s = las.og.train$lambda.1se) != 0)],
-  rownames(coef(las.psis.og.train, s = las.psis.og.train$lambda.1se))[which(coef(las.psis.og.train, s = las.psis.og.train$lambda.1se) != 0)],
-  rownames(coef(las.d0.train, s = las.d0.train$lambda.1se))[which(coef(las.d0.train, s = las.d0.train$lambda.1se) != 0)],
-  rownames(coef(las.d1.train, s = las.d1.train$lambda.1se))[which(coef(las.d1.train, s = las.d1.train$lambda.1se) != 0)],
-  rownames(coef(las.d2.train, s = las.d2.train$lambda.1se))[which(coef(las.d2.train, s = las.d2.train$lambda.1se) != 0)],
-  rownames(coef(las.d3.train, s = las.d3.train$lambda.1se))[which(coef(las.d3.train, s = las.d3.train$lambda.1se) != 0)],
-  rownames(coef(las.d4.train, s = las.d4.train$lambda.1se))[which(coef(las.d4.train, s = las.d4.train$lambda.1se) != 0)],
-  rownames(coef(las.all.train, s = las.all.train$lambda.1se))[which(coef(las.all.train, s = las.all.train$lambda.1se) != 0)]
+cov.kept.list <- list(  rownames(coef(las.og.train, s = las.og.train$lambda.1se))[which(coef(las.og.train, s = las.og.train$lambda.1se) != 0)],
+                        rownames(coef(las.psis.og.train, s = las.psis.og.train$lambda.1se))[which(coef(las.psis.og.train, s = las.psis.og.train$lambda.1se) != 0)],
+                        rownames(coef(las.dcv.train, s = las.dcv.train$lambda.1se))[which(coef(las.dcv.train, s = las.dcv.train$lambda.1se) != 0)],
+                        rownames(coef(las.all.train, s = las.all.train$lambda.1se))[which(coef(las.all.train, s = las.all.train$lambda.1se) != 0)]
 )
 
-names(cov.kept.list) <- c("all og", "all nodes",
-                              "all og + 0 depth nodes", "all og + 1 depth nodes",
-                              "all og + 2 depth nodes", "all og + 3 depth nodes",
-                              "all og + 4 depth nodes", "all og + all nodes")
+names(cov.kept.list) <- c("og", "nodes", "cv", "all")
+
+cov.kept.list
