@@ -1,9 +1,9 @@
-n = 500
-p = 100
+n = 50
+p = 25
 sd = 1
-setting = 3
+setting = 1
 
-set.seed(92617)
+#set.seed(92617)
 sim.data <- sparse.sims(n = n, p = p, sd = sd, setting = setting)
 
 og.train <- as.data.frame(sim.data[[1]]$train)
@@ -38,7 +38,7 @@ og.and.psis.og.test <- cbind(og.test, psis.def.og.test)
 # Augmented Data frames
 # cross validaiton set up
 num.nodes.depth <- c(1,3,7,15,31) # up to depth 4
-set.seed(92617)
+#set.seed(92617)
 # 5 fold
 tot.n <- nrow(og.train)
 folds <- sample(rep(1:5, length.out = tot.n))

@@ -1,8 +1,8 @@
 # parameter combination
-p.vals <- c(10, 25)#, 50)  # covs
-n.obs <- c(50, 100)#, 250, 500, 1000)  # obs
-settings <- 1:2
-nsims <- 2
+p.vals <- c(10, 25, 50)  # covs
+n.obs <- c(50, 100, 250, 500)  # obs
+settings <- 1:9
+nsims <- 100
 
 # parallel backend (get cpu cores)
 n_cores <- length( parallelly::availableWorkers() )-10
@@ -278,10 +278,10 @@ sim.res <- foreach(i = 1:nrow(sim.combos), .errorhandling = 'pass', .packages = 
     )
 
     # information about non-zero coefficients
-    res.1sim.row$cov_kept_all_og <- list(cov.kept.list$all_og)
-    res.1sim.row$cov_kept_all_nodes <- list(cov.kept.list$all_nodes)
+    res.1sim.row$cov_kept_all_og <- list(cov.kept.list$og)
+    res.1sim.row$cov_kept_all_nodes <- list(cov.kept.list$nodes)
     res.1sim.row$cov_kept_cv <- list(cov.kept.list$cv)
-    res.1sim.row$cov_kept_all_og_all_nodes <- list(cov.kept.list$all_og_all_nodes)
+    res.1sim.row$cov_kept_all_og_all_nodes <- list(cov.kept.list$all)
 
     return(res.1sim.row)
   }, error = function(e) {
