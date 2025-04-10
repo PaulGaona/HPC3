@@ -3,7 +3,7 @@
 #SBATCH --job-name=small.cov.small.n    ## Name of the job.
 #SBATCH -A AKENNEY1_LAB      ## account names (AKENNEY1_LAB)
 
-#SBATCH -partition=free               ## partition name (free, stats.p,
+#SBATCH --partition=free               ## partition name (free, stats.p,
 #SBATCH --nodes=1             ## (-N) number of nodes to use
 #SBATCH --ntasks=40          ## (# Fill in how many cpu cores you'd like)
 #SBATCH --cpus-per-task=1     ## number of cores the job needs
@@ -11,7 +11,7 @@
 #SBATCH --mem=25G # Fill in how much RAM you'd li
 #SBATCH --time=12:00 # Fill in the max run time to allow (hr:min:sec)
 
-#SBATCH --mail-type=end,fail ## what will be emailed 
+#SBATCH --mail-type=end,fail ## what will be emailed
 #SBATCH --mail-user=pgaonapa@uci.edu ## email notification
 
 #SBATCH --error=slurm-%J.err  ## error log file
