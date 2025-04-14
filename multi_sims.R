@@ -1,8 +1,8 @@
 # parameter combination
-p.vals <- c(10, 25, 50)  # covs
-n.obs <- c(50, 100, 250, 500)  # obs
-settings <- 1:9
-nsims <- 100
+p.vals <- c(10, 25)#, 50)  # covs
+n.obs <- c(50, 100)#, 250, 500)  # obs
+settings <- 2
+nsims <- 5
 
 # parallel backend (get cpu cores)
 n_cores <- length( parallelly::availableWorkers() )-10
@@ -285,6 +285,17 @@ sim.res <- foreach(i = 1:nrow(sim.combos), .errorhandling = 'pass', .packages = 
 
     return(res.1sim.row)
   }, error = function(e) {
+    # Get traceback information
+    error_trace <- paste(capture.output(traceback()), collapse = "\n")
+
+    # For parallel execution, we need a simpler approach
+    # Try to get the most relevant part of the error
+    error_info <- conditionCall(e)
+    if (!is.null(error_info)) {
+      error_line <- deparse(error_info)
+    } else {
+      error_line <- "Could not determine specific error location"
+    }
     # error check return (prob should delete)
     res.1sim.row <- data.frame(
       n = n,
@@ -293,6 +304,7 @@ sim.res <- foreach(i = 1:nrow(sim.combos), .errorhandling = 'pass', .packages = 
       sim = sim_num,
       error = TRUE,
       error_message = as.character(e),
+      error_line = error_call,
       stringsAsFactors = FALSE
     )
     return(res.1sim.row)
@@ -305,4 +317,6 @@ stopCluster(cl)
 small.cov.small.n <- sim.res
 
 
-
+small.cov.small.n[[14]]$error
+small.cov.small.n[[14]]$error_message
+small.cov.small.n[[14]]$error_line
