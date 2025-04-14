@@ -1,8 +1,8 @@
 # parameter combination
-p.vals <- c(10, 25)#, 50)  # covs
-n.obs <- c(50, 100)#, 250, 500)  # obs
-settings <- 2
-nsims <- 5
+p.vals <- c(10, 25, 50)  # covs
+n.obs <- c(50, 100, 250, 500)  # obs
+settings <- 1:9
+nsims <- 100
 
 # parallel backend (get cpu cores)
 n_cores <- length( parallelly::availableWorkers() )-10
