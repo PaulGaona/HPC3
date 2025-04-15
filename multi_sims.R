@@ -1,8 +1,8 @@
 # parameter combination
-p.vals <- c(10, 25, 50)  # covs
-n.obs <- c(50, 100, 250, 500)  # obs
+p.vals <- c(10, 25)#, 50)  # covs
+n.obs <- c(50, 100)#, 250, 500)  # obs
 settings <- 1:9
-nsims <- 100
+nsims <- 10
 
 # parallel backend (get cpu cores)
 n_cores <- length( parallelly::availableWorkers() )-10
@@ -316,7 +316,3 @@ stopCluster(cl)
 
 small.cov.small.n <- sim.res
 
-
-small.cov.small.n[[14]]$error
-small.cov.small.n[[14]]$error_message
-small.cov.small.n[[14]]$error_line
