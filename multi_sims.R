@@ -1,8 +1,8 @@
 # parameter combination
-p.vals <- c(10, 25)#, 50)  # covs
-n.obs <- c(50, 100)#, 250, 500)  # obs
+p.vals <- c(10, 25, 50)  # covs
+n.obs <- c(50, 100, 250, 500)  # obs
 settings <- 1:9
-nsims <- 10
+nsims <- 100
 
 # parallel backend (get cpu cores)
 n_cores <- length( parallelly::availableWorkers() )-10
@@ -64,7 +64,7 @@ sim.res <- foreach(i = 1:nrow(sim.combos), .errorhandling = 'pass', .packages = 
     mdi.def <- rfplus(x = subset(og.train, select = -y), y = og.train$y,
                       normalize_stumps = TRUE, normalize_raw = TRUE,
                       ntree = 1, replace = FALSE, sample.fraction = 1, mtry = ncol(og.train) - 1,
-                      min.bucket = round(20/3), min.node.size = 20)
+                      min.bucket = 5, min.node.size = 15)
 
     psis.def.og.train <- mdi.def$psis_train[[1]]
     psis.def.og.train.df <- cbind(y = og.train$y, psis.def.og.train)
@@ -157,6 +157,7 @@ sim.res <- foreach(i = 1:nrow(sim.combos), .errorhandling = 'pass', .packages = 
 
       gc(verbose = FALSE)
     }
+
     # get dataframe for best depth from cv.res
     best.depth <- cv.res[which.min(cv.res$mse), "depth"]
     best.depth.ind <- as.numeric(gsub("d", "", best.depth)) + 1
@@ -167,6 +168,7 @@ sim.res <- foreach(i = 1:nrow(sim.combos), .errorhandling = 'pass', .packages = 
     best.depth.ridge <- ridge.cv.res[which.min(ridge.cv.res$mse), "depth"]
     best.depth.ridge.ind <- as.numeric(gsub("d", "", best.depth.ridge)) + 1
 
+    # trainings
     if (num.nodes.depth[best.depth.ind] < ncol(psis.def.og.train)) {
       cv.og.and.node.train.df <- cbind(og.train, subset(psis.def.og.train, select = c(1:num.nodes.depth[best.depth.ind])))
     } else {
@@ -174,17 +176,35 @@ sim.res <- foreach(i = 1:nrow(sim.combos), .errorhandling = 'pass', .packages = 
     }
 
     if (num.nodes.depth[best.depth.lasso.ind] < ncol(psis.def.og.train)) {
-      cv.og.and.node.train.df <- cbind(og.train, subset(psis.def.og.train, select = c(1:num.nodes.depth[best.depth.lasso.ind])))
+      cv.og.and.node.train.lasso.df <- cbind(og.train, subset(psis.def.og.train, select = c(1:num.nodes.depth[best.depth.lasso.ind])))
     } else {
-      cv.og.and.node.train.df <- cbind(og.train, psis.def.og.train)
+      cv.og.and.node.train.lasso.df <- cbind(og.train, psis.def.og.train)
     }
 
     if (num.nodes.depth[best.depth.ridge.ind] < ncol(psis.def.og.train)) {
-      cv.og.and.node.train.df <- cbind(og.train, subset(psis.def.og.train, select = c(1:num.nodes.depth[best.depth.ridge.ind])))
+      cv.og.and.node.train.ridge.df <- cbind(og.train, subset(psis.def.og.train, select = c(1:num.nodes.depth[best.depth.ridge.ind])))
     } else {
-      cv.og.and.node.train.df <- cbind(og.train, psis.def.og.train)
+      cv.og.and.node.train.ridge.df <- cbind(og.train, psis.def.og.train)
     }
 
+    # corresponding test datasets
+    if (num.nodes.depth[best.depth.ind] < ncol(psis.def.og.test)) {
+      cv.og.and.node.test.df <- cbind(og.test, subset(psis.def.og.test, select = c(1:num.nodes.depth[best.depth.ind])))
+    } else {
+      cv.og.and.node.test.df <- cbind(og.test, psis.def.og.test)
+    }
+
+    if (num.nodes.depth[best.depth.lasso.ind] < ncol(psis.def.og.test)) {
+      cv.og.and.node.test.lasso.df <- cbind(og.test, subset(psis.def.og.test, select = c(1:num.nodes.depth[best.depth.lasso.ind])))
+    } else {
+      cv.og.and.node.test.lasso.df <- cbind(og.test, psis.def.og.test)
+    }
+
+    if (num.nodes.depth[best.depth.ridge.ind] < ncol(psis.def.og.test)) {
+      cv.og.and.node.test.ridge.df <- cbind(og.test, subset(psis.def.og.test, select = c(1:num.nodes.depth[best.depth.ridge.ind])))
+    } else {
+      cv.og.and.node.test.ridge.df <- cbind(og.test, psis.def.og.test)
+    }
 
     ##### Statistical Models
     # linear
@@ -195,13 +215,12 @@ sim.res <- foreach(i = 1:nrow(sim.combos), .errorhandling = 'pass', .packages = 
     # lasso
     las.og.train <- cv.glmnet(as.matrix(og.train[, -1]), og.train$y, alpha = 1) # lasso - all og covariates
     las.psis.og.train <- cv.glmnet(as.matrix(psis.def.og.train.df[, -1]), psis.def.og.train.df$y, alpha = 1) # lasso - all nodes
-    las.dcv.train <- cv.glmnet(as.matrix(cv.og.and.node.train.df[, -1]), cv.og.and.node.train.df$y, alpha = 1) # lasso - best model from cv
+    las.dcv.train <- cv.glmnet(as.matrix(cv.og.and.node.train.lasso.df[, -1]), cv.og.and.node.train.lasso.df$y, alpha = 1) # lasso - best model from cv
     las.all.train <- cv.glmnet(as.matrix(og.and.psis.og.train[, -1]), og.and.psis.og.train$y, alpha = 1) # lasso - all og covariates and all nodes
-    # return non-0 coefficients
     # ridge
     rid.og.train <- cv.glmnet(as.matrix(og.train[, -1]), og.train$y, alpha = 0) # ridge - all og covariates
     rid.psis.og.train <- cv.glmnet(as.matrix(psis.def.og.train.df[, -1]), psis.def.og.train.df$y, alpha = 0) # ridge - all nodes
-    rid.dcv.train <- cv.glmnet(as.matrix(cv.og.and.node.train.df[, -1]), cv.og.and.node.train.df$y, alpha = 0) # ridge - best model from cv
+    rid.dcv.train <- cv.glmnet(as.matrix(cv.og.and.node.train.ridge.df[, -1]), cv.og.and.node.train.ridge.df$y, alpha = 0) # ridge - best model from cv
     rid.all.train <- cv.glmnet(as.matrix(og.and.psis.og.train[, -1]), og.and.psis.og.train$y, alpha = 0) # ridge - all og covariates and all nodes
     #### tree based methods
     # tree
@@ -209,23 +228,24 @@ sim.res <- foreach(i = 1:nrow(sim.combos), .errorhandling = 'pass', .packages = 
     # random forest
     rf.train <- randomForest(x = og.train[, -1], y = og.train$y)
     ################# Predictions
+    ################# Predictions
     oracle.test <- predict(oracle.train.model, newdata = og.test) # oracle
     # linear
     lin.test <- predict(lin.og.train, newdata = og.test) # linear - all og covariates
     lin.psis.test <- predict(lin.psis.og.train, newdata = psis.def.og.test) # linear - all nodes
-    lin.dcv.test <- predict(lin.dcv.train, newdata = og.and.psis.og.test) # linear - best model from cv
+    lin.dcv.test <- predict(lin.dcv.train, newdata = cv.og.and.node.test.df) # linear - best model from cv
     lin.all.test <- predict(lin.all.train, newdata = og.and.psis.og.test) # linear - all og covariates and all nodes
     # lasso
     newx.start <- as.matrix(og.and.psis.og.test[, -1])
 
     las.test <- predict(las.og.train, newx = as.matrix(og.test[, -1]), s = "lambda.1se") # lasso - all og covariates
     las.psis.test <- predict(las.psis.og.train, newx = as.matrix(psis.def.og.test), s = "lambda.1se") # lasso - all nodes
-    las.dcv.test <- predict(las.dcv.train, newx = newx.start[,colnames(cv.og.and.node.train.df[, -1])], s = "lambda.1se") # lasso - best model from cv
+    las.dcv.test <- predict(las.dcv.train, newx = as.matrix(cv.og.and.node.test.lasso.df[, -1]), s = "lambda.1se") # lasso - best model from cv
     las.all.test <- predict(las.all.train, newx = newx.start, s = "lambda.1se") # lasso - all og covariates and all nodes
     # ridge
     rid.test <- predict(rid.og.train, newx = as.matrix(og.test[, -1]), s = "lambda.1se") # ridge - all og covariates
     rid.psis.test <- predict(rid.psis.og.train, newx = as.matrix(psis.def.og.test), s = "lambda.1se") # ridge - all nodes
-    rid.dcv.test <- predict(rid.dcv.train, newx = newx.start[,colnames(cv.og.and.node.train.df[, -1])], s = "lambda.1se") # ridge - best model from cv
+    rid.dcv.test <- predict(rid.dcv.train, newx = as.matrix(cv.og.and.node.test.ridge.df[, -1]), s = "lambda.1se") # ridge - best model from cv
     rid.all.test <- predict(rid.all.train, newx = newx.start, s = "lambda.1se") # ridge - all og covariates and all nodes
     # tree
     tree.def.test <- predict(tree.train, newdata = og.test) # def tree
@@ -291,16 +311,7 @@ stopCluster(cl)
 
 small.cov.small.n <- sim.res
 
-# iteratate through list to find exactly: <simpleError in value[[3L]](cond): object 'error_call' not found>
 
-for (i in 1:length(small.cov.small.n)) {
-  if (is(small.cov.small.n[[i]], "try-error")) {
-    # Print the error message
-    print(paste("Error in simulation", i, ":", small.cov.small.n[[i]]))
-  } else {
-    # Print the result
-    print(paste("Simulation", i, "completed successfully."))
-  }
-  print(small.cov.small.n[[i]])
-}
+
+small.cov.small.n[[293]]$call
 
