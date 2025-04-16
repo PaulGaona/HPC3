@@ -39,7 +39,6 @@ sim.res <- foreach(i = 1:nrow(sim.combos), .errorhandling = 'pass', .packages = 
   sd <- 1
 
   # run sims
-  tryCatch({
     ###### PREP
     # DGP (sims)
     sim.data <- sparse.sims(n = n, p = p, sd = sd, setting = setting)
@@ -284,35 +283,24 @@ sim.res <- foreach(i = 1:nrow(sim.combos), .errorhandling = 'pass', .packages = 
     res.1sim.row$cov_kept_all_og_all_nodes <- list(cov.kept.list$all)
 
     return(res.1sim.row)
-  }, error = function(e) {
-    # Get traceback information
-    error_trace <- paste(capture.output(traceback()), collapse = "\n")
 
-    # For parallel execution, we need a simpler approach
-    # Try to get the most relevant part of the error
-    error_info <- conditionCall(e)
-    if (!is.null(error_info)) {
-      error_line <- deparse(error_info)
-    } else {
-      error_line <- "Could not determine specific error location"
-    }
-    # error check return (prob should delete)
-    res.1sim.row <- data.frame(
-      n = n,
-      p = p,
-      setting = setting,
-      sim = sim_num,
-      error = TRUE,
-      error_message = as.character(e),
-      error_line = error_call,
-      stringsAsFactors = FALSE
-    )
-    return(res.1sim.row)
-  })
 }
 
 # end
 stopCluster(cl)
 
 small.cov.small.n <- sim.res
+
+# iteratate through list to find exactly: <simpleError in value[[3L]](cond): object 'error_call' not found>
+
+for (i in 1:length(small.cov.small.n)) {
+  if (is(small.cov.small.n[[i]], "try-error")) {
+    # Print the error message
+    print(paste("Error in simulation", i, ":", small.cov.small.n[[i]]))
+  } else {
+    # Print the result
+    print(paste("Simulation", i, "completed successfully."))
+  }
+  print(small.cov.small.n[[i]])
+}
 
