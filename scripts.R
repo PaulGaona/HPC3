@@ -11,4 +11,5 @@ source("./multi_sims.R")
 #save(cov.kept.list, file = "lasso.cov.kept.rda")
 
 # results from multi_sims
-save(small.cov.small.n, file = "small.cov.small.n.rda")
+#save(small.cov.small.n, file = "small.cov.small.n.rda")
+save(large.cov.large.n, file = "large.cov.large.n.rda")

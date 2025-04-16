@@ -312,6 +312,3 @@ stopCluster(cl)
 small.cov.small.n <- sim.res
 
 
-
-small.cov.small.n[[293]]$call
-
