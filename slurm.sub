@@ -17,5 +17,5 @@
 #SBATCH --error=slurm-%J.err  ## error log file
 #SBATCH --output=slurm-%J.out ## output log file
 
-module load R/4.1.2
-Rscripts scripts.R
+module load R/4.3.3
+Rscript scripts.R

@@ -1,5 +1,7 @@
 library(glmnet)
 library(rpart)
+# load rfplus from github
+#devtools::install_local("/Users/paulgaona/Documents/GitHub DONT MOVE/HPC3/RFPlus",force = TRUE)
 library(RFPlus)
 library(MASS)
 library(randomForest)

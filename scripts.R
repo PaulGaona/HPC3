@@ -1,5 +1,5 @@
 # functions and packages
-source("./funs.R")
+source(".//funs.R")
 source("./packages.R")
 # script for running analysis
 # change when needed to
