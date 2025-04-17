@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=small.cov.small.n    ## Name of the job.
-#SBATCH -A akenney_lab      ## account names (akenney_lab)
+#SBATCH -A AKENNEY1_LAB      ## account names (AKENNEY1_LAB)
 
 #SBATCH --partition=standard               ## partition name (free, stats.p,
 #SBATCH --nodes=1             ## (-N) number of nodes to use
