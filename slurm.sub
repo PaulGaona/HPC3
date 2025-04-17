@@ -9,7 +9,7 @@
 #SBATCH --cpus-per-task=1     ## number of cores the job needs
 
 #SBATCH --mem=25G # Fill in how much RAM you'd li
-#SBATCH --time=12:00 # Fill in the max run time to allow (hr:min:sec)
+#SBATCH --time=12:00:00 # Fill in the max run time to allow (hr:min:sec)
 
 #SBATCH --mail-type=end,fail ## what will be emailed
 #SBATCH --mail-user=pgaonapa@uci.edu ## email notification
