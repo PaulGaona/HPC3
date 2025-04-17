@@ -1,9 +1,9 @@
 #!/bin/bash
 
 #SBATCH --job-name=small.cov.small.n    ## Name of the job.
-#SBATCH -A AKENNEY1_LAB      ## account names (AKENNEY1_LAB)
+#SBATCH -A akenney_lab      ## account names (akenney_lab)
 
-#SBATCH --partition=free               ## partition name (free, stats.p,
+#SBATCH --partition=standard               ## partition name (free, stats.p,
 #SBATCH --nodes=1             ## (-N) number of nodes to use
 #SBATCH --ntasks=40          ## (# Fill in how many cpu cores you'd like)
 #SBATCH --cpus-per-task=1     ## number of cores the job needs
