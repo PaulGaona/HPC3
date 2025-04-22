@@ -1,0 +1,21 @@
+#!/bin/bash
+
+#SBATCH --job-name=med.cov.med.n    ## Name of the job.
+#SBATCH -A AKENNEY1_LAB      ## account names (AKENNEY1_LAB)
+
+#SBATCH --partition=standard               ## partition name (free, stats.p,
+#SBATCH --nodes=1             ## (-N) number of nodes to use
+#SBATCH --ntasks=40          ## (# Fill in how many cpu cores you'd like)
+#SBATCH --cpus-per-task=1     ## number of cores the job needs
+
+#SBATCH --mem-per-cpu=6G    # requesting max memory per CPU
+#SBATCH --time=60:00:00 # Fill in the max run time to allow (hr:min:sec)
+
+#SBATCH --mail-type=end,fail ## what will be emailed
+#SBATCH --mail-user=pgaonapa@uci.edu ## email notification
+
+#SBATCH --error=slurm-%J.err  ## error log file
+#SBATCH --output=slurm-%J.out ## output log file
+
+module load R/4.3.3
+Rscript scripts_med.R

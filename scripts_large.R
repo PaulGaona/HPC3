@@ -2,7 +2,7 @@
 source(".//funs.R")
 source("./packages.R")
 # script for running analysis
-source("./multi_sims.R")
+source("./med_multi_sims.R")
 
 # results from multi_sims
-save(small.cov.small.n, file = "small.cov.small.n2.rda")
+save(large.cov.large.n, file = "large.cov.large.n2.rda")
