@@ -13,4 +13,4 @@ source("./multi_sims.R")
 
 # results from multi_sims
 #save(large.cov.large.n, file = "large.cov.large.n.rda")
-save(small.cov.small.n2, file = "small.cov.small.n2.rda")
+save(small.cov.small.n, file = "small.cov.small.n2.rda")
