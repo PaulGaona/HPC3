@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=small.cov.small.n    ## Name of the job.
+#SBATCH --job-name=small.cov.small.n2    ## Name of the job.
 #SBATCH -A AKENNEY1_LAB      ## account names (AKENNEY1_LAB)
 
 #SBATCH --partition=standard               ## partition name (free, stats.p,
@@ -18,4 +18,4 @@
 #SBATCH --output=slurm-%J.out ## output log file
 
 module load R/4.3.3
-Rscript scripts.R
+Rscript scripts_small.R
