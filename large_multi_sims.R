@@ -64,7 +64,7 @@ sim.res <- foreach(i = 1:nrow(sim.combos), .errorhandling = 'pass', .packages = 
   mdi.def <- rfplus(x = subset(og.train, select = -y), y = og.train$y,
                     normalize_stumps = TRUE, normalize_raw = TRUE,
                     ntree = 1, replace = FALSE, sample.fraction = 1, mtry = ncol(og.train) - 1,
-                    min.bucket = 10, min.node.size = 20)
+                    min.bucket = 20, min.node.size = 20)
 
   psis.def.og.train <- mdi.def$psis_train[[1]]
   psis.def.og.train.df <- cbind(y = og.train$y, psis.def.og.train)
@@ -226,7 +226,7 @@ sim.res <- foreach(i = 1:nrow(sim.combos), .errorhandling = 'pass', .packages = 
   # tree
   tree.train <- rpart(y ~ ., data = og.train)
   # random forest
-  rf.train <- randomForest(x = og.train[, -1], y = og.train$y,nodesize = 20)
+  rf.train <- randomForest(x = og.train[, -1], y = og.train$y,ntree=100,nodesize = 20)
   ################# Predictions
   ################# Predictions
   oracle.test <- predict(oracle.train.model, newdata = og.test) # oracle
