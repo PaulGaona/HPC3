@@ -1,0 +1,10 @@
+Loading required package: Matrix
+Loaded glmnet 4.1-8
+randomForest 4.7-1.1
+Type rfNews() to see new features/changes/bug fixes.
+Loading required package: foreach
+Loading required package: iterators
+Error in makePSOCKcluster(names = spec, ...) : 
+  numeric 'names' must be >= 1
+Calls: source ... withVisible -> eval -> eval -> makeCluster -> makePSOCKcluster
+Execution halted
