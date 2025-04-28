@@ -4,6 +4,3 @@ randomForest 4.7-1.1
 Type rfNews() to see new features/changes/bug fixes.
 Loading required package: foreach
 Loading required package: iterators
-Error in save(large.cov.large.n, file = "large.cov.large.n2.rda") : 
-  object ‘large.cov.large.n’ not found
-Execution halted
