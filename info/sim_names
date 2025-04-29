@@ -1,0 +1,18 @@
+5 sims to run (and files):
+
+  1. small
+    multi_sims.R
+    scripts_small.R
+    slurm_small.sub
+  2. medium
+    med_multi_sims.R
+    scripts_med.R
+    slurm_med.sub
+  3. medium large
+    medlarge_multi_sims.R
+    scripts_medlarge.R
+    slurm_medlarge.sub
+  4.large
+    large_multi_sims.R
+    scripts_large.R
+    slurm_large.sub

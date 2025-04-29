@@ -1,6 +1,6 @@
 # parameter combination
 p.vals <- c(100, 250, 500, 1000, 2000, 5000)  # covs
-n.obs <- c(500, 1000)  # obs 500 1000
+n.obs <- c(2000, 5000)  # obs2000 5000
 settings <- 1:9
 nsims <- 100
 
@@ -309,4 +309,4 @@ sim.res <- foreach(i = 1:nrow(sim.combos), .errorhandling = 'pass', .packages = 
 # end
 stopCluster(cl)
 
-med.cov.med.n <- sim.res
+medlarge.cov.medlarge.n <- sim.res

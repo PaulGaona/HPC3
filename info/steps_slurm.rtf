@@ -1,11 +1,11 @@
 {\rtf1\ansi\ansicpg1252\cocoartf2821
 \cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fnil\fcharset0 Menlo-Bold;\f2\fnil\fcharset0 Menlo-Regular;
-\f3\fnil\fcharset0 HelveticaNeue;}
+\f3\fnil\fcharset0 HelveticaNeue;\f4\fnil\fcharset0 .SFNS-Regular;}
 {\colortbl;\red255\green255\blue255;\red0\green0\blue109;\red246\green246\blue246;\red49\green49\blue49;
 \red173\green173\blue173;\red117\green117\blue117;\red80\green53\blue137;}
 {\*\expandedcolortbl;;\cssrgb\c0\c0\c50196;\cssrgb\c97255\c97255\c97255;\cssrgb\c25098\c25098\c25098;
 \cssrgb\c73333\c73333\c73333;\cssrgb\c53231\c53231\c53231;\cssrgb\c39216\c29020\c60784;}
-\margl1440\margr1440\vieww14820\viewh13180\viewkind0
+\margl1440\margr1440\vieww15120\viewh13480\viewkind0
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
 
 \f0\fs24 \cf0 1. Connect to Github SSH\
@@ -30,8 +30,18 @@ $
 5. \cf6 \cb1 sbatch slurm.sub
 \f3\fs49 \cf7 \
 \
-CURRENT submitted batch job: 37838988\
+# push new files;\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f4\fs26 \cf0 \kerning1\expnd0\expndtw0 git add .\
+git commit -m \'93update\'94\
+# login\
+git push origin main\
+
+\f3\fs49 \cf7 \expnd0\expndtw0\kerning0
 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf7 \
 \
 LINKS:\
 Jobs hoot\
