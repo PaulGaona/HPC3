@@ -5,7 +5,7 @@ settings <- 1:9
 nsims <- 100
 
 # parallel backend (get cpu cores)
-n_cores <- 40
+n_cores <- 60
 cl <- makeCluster(n_cores)
 registerDoParallel(cl)
 

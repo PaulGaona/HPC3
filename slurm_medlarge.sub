@@ -5,7 +5,7 @@
 
 #SBATCH --partition=standard               ## partition name (free, stats.p,
 #SBATCH --nodes=1             ## (-N) number of nodes to use
-#SBATCH --ntasks=40          ## (# Fill in how many cpu cores you'd like)
+#SBATCH --ntasks=64          ## (# Fill in how many cpu cores you'd like)
 #SBATCH --cpus-per-task=1     ## number of cores the job needs
 
 #SBATCH --mem-per-cpu=6G    # requesting max memory per CPU
