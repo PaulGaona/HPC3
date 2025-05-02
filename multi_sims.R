@@ -64,7 +64,7 @@ sim.res <- foreach(i = 1:nrow(sim.combos), .errorhandling = 'pass', .packages = 
     mdi.def <- rfplus(x = subset(og.train, select = -y), y = og.train$y,
                       normalize_stumps = TRUE, normalize_raw = TRUE,
                       ntree = 1, replace = FALSE, sample.fraction = 1, mtry = ncol(og.train) - 1,
-                      min.bucket = 5, min.node.size = 15)
+                      min.bucket = 5, min.node.size = 5)
 
     psis.def.og.train <- mdi.def$psis_train[[1]]
     psis.def.og.train.df <- cbind(y = og.train$y, psis.def.og.train)
