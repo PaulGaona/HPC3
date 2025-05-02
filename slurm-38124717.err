@@ -1,0 +1,10 @@
+Loading required package: Matrix
+Loaded glmnet 4.1-8
+randomForest 4.7-1.1
+Type rfNews() to see new features/changes/bug fixes.
+Loading required package: foreach
+Loading required package: iterators
+Error in unserialize(socklist[[n]]) : error reading from connection
+Calls: source ... recvOneData -> recvOneData.SOCKcluster -> unserialize
+Execution halted
+slurmstepd: error: Detected 1 oom_kill event in StepId=38124717.batch. Some of the step tasks have been OOM Killed.
