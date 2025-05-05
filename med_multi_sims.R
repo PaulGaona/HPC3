@@ -74,31 +74,35 @@ sim.res <- foreach(i = 1:nrow(sim.combos), .errorhandling = 'pass', .packages = 
   og.and.psis.og.test <- cbind(og.test, psis.def.og.test)
   # Augmented Data frames
   # cross validaiton set up
-  num.nodes.depth <- c(1,3,7,15,31) # up to depth 4
+  num.nodes.depth <- 2^seq(0,ceiling(log2( max( as.numeric( gsub(".node", "", colnames(psis.def.og.train)) ) ) ))) # (Strictly less then)
+
   set.seed(92617)
   # 5 fold
   tot.n <- nrow(og.train)
   folds <- sample(rep(1:5, length.out = tot.n))
 
   cv.res <- data.frame(depth = character(), mse = numeric(), stringsAsFactors = FALSE)
-  lasso.cv.res <- data.frame(depth = character(), nodes = numeric(), mse = numeric(), stringsAsFactors = FALSE)
-  ridge.cv.res <- data.frame(depth = character(), nodes = numeric(), mse = numeric(), stringsAsFactors = FALSE)
+  cv.res <- data.frame(depth = character(), nodes = numeric(), mse = numeric(), sd.mse = numeric())
+
+  # Extract node numbers from column names
+  node.nums <- as.numeric(gsub(".node", "", colnames(psis.def.og.train)))
 
   for (i in 1:length(num.nodes.depth)) {
     depth.name <- paste0("d", i-1)
 
-    # Create dataset for current depth only (don't store all in memory)
-    if (num.nodes.depth[i] < ncol(psis.def.og.train)) {
-      curr.depth.df <- cbind(og.train, subset(psis.def.og.train, select = c(1:num.nodes.depth[i])))
+    # Select columns where node number is less than the current depth threshold
+    sltd.cols <- which(node.nums < num.nodes.depth[i])
+    # Create dataset for current depth only
+    if (length(sltd.cols) > 0) {
+      curr.depth.df <- cbind(og.train, psis.def.og.train[, sltd.cols, drop = FALSE])
     } else {
-      curr.depth.df <- cbind(og.train, psis.def.og.train)
+      curr.depth.df <- og.train
     }
 
-    fold.mse <- numeric(5)
-    # for linear model
+    fold.mse <- numeric(max(folds))
     # For each fold
-    for (k in 1:5) {
-      # training and validation indeces
+    for (k in seq(max(folds))) {
+      # Training and validation indices
       cv.train.indices <- which(folds != k)
       cv.valid.indices <- which(folds == k)
 
@@ -109,64 +113,35 @@ sim.res <- foreach(i = 1:nrow(sim.combos), .errorhandling = 'pass', .packages = 
       cv.pred <- predict(cv.mod, newdata = cv.valid.data)
 
       # Calculate MSE for this fold
-      fold.mse[k] <- mean((cv.valid.data$y - cv.pred)^2)
+      num <- ncol( psis.def.og.train[, sltd.cols, drop = FALSE] )
+      den <- num.nodes.depth[i]
+
+      fold.mse[k] <- (sum((cv.valid.data$y - cv.pred)^2)) / (length(cv.pred)*(num/den))
 
       # Clean up to free memory
       rm(cv.train.data, cv.valid.data, cv.mod, cv.pred)
       gc(verbose = FALSE)
     }
+
     # Average MSE across folds
     cv.avg.mse <- mean(fold.mse)
+    cv.sd.mse <- sd(fold.mse)
 
     cv.res <- rbind(cv.res, data.frame(
       depth = depth.name,
-      nodes = num.nodes.depth[i],
-      mse = cv.avg.mse
-    ))
-    # regularization x and y
-    x <- as.matrix(curr.depth.df[, -1])
-    y <- curr.depth.df$y
-
-    # for lasso
-    cv.lasso <- cv.glmnet(x, y, alpha = 1, nfolds = 5)
-
-    min.mse.lasso <- min(cv.lasso$cvm)
-
-    lasso.cv.res <- rbind(lasso.cv.res, data.frame(
-      depth = depth.name,
-      nodes = num.nodes.depth[i],
-      mse = min.mse.lasso,
-      min.lambda = cv.lasso$lambda.min,
-      min.lambda.1se = cv.lasso$lambda.1se
-    ))
-
-    # for ridge
-    cv.ridge <- cv.glmnet(x, y, alpha = 0, nfolds = 5)
-    min.mse.ridge <- min(cv.ridge$cvm)
-
-    ridge.cv.res <- rbind(ridge.cv.res, data.frame(
-      depth = depth.name,
-      nodes = num.nodes.depth[i],
-      mse = min.mse.ridge,
-      min.lambda = cv.ridge$lambda.min,
-      min.lambda.1se = cv.ridge$lambda.1se
+      nodes = length(sltd.cols),
+      mse = cv.avg.mse,
+      sd.mse = cv.sd.mse
     ))
 
     # Clean up to free memory
-    rm(curr.depth.df, fold.mse,cv.lasso, x, y, cv.ridge, min.mse.lasso, min.mse.ridge)
-
+    rm(curr.depth.df, fold.mse)
     gc(verbose = FALSE)
   }
 
-  # get dataframe for best depth from cv.res
-  best.depth <- cv.res[which.min(cv.res$mse), "depth"]
-  best.depth.ind <- as.numeric(gsub("d", "", best.depth)) + 1
-  # lasso
-  best.depth.lasso <- lasso.cv.res[which.min(lasso.cv.res$mse), "depth"]
-  best.depth.lasso.ind <- as.numeric(gsub("d", "", best.depth.lasso)) + 1
-  # ridge
-  best.depth.ridge <- ridge.cv.res[which.min(ridge.cv.res$mse), "depth"]
-  best.depth.ridge.ind <- as.numeric(gsub("d", "", best.depth.ridge)) + 1
+  # get dataframe for best depth from cv.res, and get lasso and ridge
+  best.depth <- best.depth.lasso <-  best.depth.ridge <-  cv.res[which.min(cv.res$mse), "depth"]
+  best.depth.ind <- best.depth.lasso.ind <- best.depth.ridge.ind <- as.numeric(gsub("d", "", best.depth)) + 1
 
   # trainings
   if (num.nodes.depth[best.depth.ind] < ncol(psis.def.og.train)) {

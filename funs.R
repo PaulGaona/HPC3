@@ -408,3 +408,71 @@ oracle.mods <- function(data = train,setting){
 }
 
 ################################################################################
+
+# this is a cross-validated function getting a modified MSE
+
+cv.model.fun <- function(og.train = og.train,
+                         psis.def.og.train = psis.def.og.train,
+                         num.nodes.depth = num.nodes.depth,
+                         folds = folds) {
+  # Initialize result dataframe
+  cv.res <- data.frame(depth = character(), nodes = numeric(), mse = numeric(), sd.mse = numeric())
+
+  # Extract node numbers from column names
+  node.nums <- as.numeric(gsub(".node", "", colnames(psis.def.og.train)))
+
+  for (i in 1:length(num.nodes.depth)) {
+    depth.name <- paste0("d", i-1)
+
+    # Select columns where node number is less than the current depth threshold
+    sltd.cols <- which(node.nums < num.nodes.depth[i])
+    # Create dataset for current depth only
+    if (length(sltd.cols) > 0) {
+      curr.depth.df <- cbind(og.train, psis.def.og.train[, sltd.cols, drop = FALSE])
+    } else {
+      curr.depth.df <- og.train
+    }
+
+    fold.mse <- numeric(max(folds))
+    # For each fold
+    for (k in seq(max(folds))) {
+      # Training and validation indices
+      cv.train.indices <- which(folds != k)
+      cv.valid.indices <- which(folds == k)
+
+      cv.train.data <- curr.depth.df[cv.train.indices, ]
+      cv.valid.data <- curr.depth.df[cv.valid.indices, ]
+
+      cv.mod <- lm(y ~ ., data = cv.train.data)
+      cv.pred <- predict(cv.mod, newdata = cv.valid.data)
+
+      # Calculate MSE for this fold
+      num <- length(sltd.cols)
+      den <- num.nodes.depth[i]
+
+      fold.mse[k] <- (sum((cv.valid.data$y - cv.pred)^2)) / (length(cv.pred)*(num/den))
+
+      # Clean up to free memory
+      rm(cv.train.data, cv.valid.data, cv.mod, cv.pred)
+      gc(verbose = FALSE)
+    }
+
+    # Average MSE across folds
+    cv.avg.mse <- mean(fold.mse)
+    cv.sd.mse <- sd(fold.mse)
+
+    cv.res <- rbind(cv.res, data.frame(
+      depth = depth.name,
+      nodes = length(sltd.cols),
+      mse = cv.avg.mse,
+      sd.mse = cv.sd.mse
+    ))
+
+    # Clean up to free memory
+    rm(curr.depth.df, fold.mse)
+    gc(verbose = FALSE)
+  }
+
+  # Return results
+  return(list(lin.cv.res = cv.res))
+}
